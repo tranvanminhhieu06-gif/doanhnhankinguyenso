@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Doanh Nhân Kỷ Nguyên Số</title>
+  <meta name="description" content="Doanh Nhân Kỷ Nguyên Số – Cập nhật tin tức kinh doanh, câu chuyện khởi nghiệp, xây dựng thương hiệu.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Thanh trên cùng -->
+  <div class="topbar">
+    <div class="container topbar__inner">
+      <span id="today"></span>
+      <span class="clock" id="clock"></span>
+      <div class="topbar__social">
+        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+        <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+        <a href="#" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="site-header" id="siteHeader" aria-roledescription="carousel" aria-label="Banner">
+    <div class="slider__track" id="slides"></div>
+    <a href="#/" class="brand">
+      <img id="logo" alt="Logo Doanh Nhân Kỷ Nguyên Số">
+      <span class="brand__text">
+        <span class="brand__name" id="siteName"></span>
+        <span class="brand__tag" id="siteTag"></span>
+        <span class="brand__intro" id="siteIntro"></span>
+      </span>
+    </a>
+    <button class="slider__arrow slider__arrow--prev" id="slidePrev" aria-label="Ảnh trước"><i class="fas fa-chevron-left"></i></button>
+    <button class="slider__arrow slider__arrow--next" id="slideNext" aria-label="Ảnh tiếp theo"><i class="fas fa-chevron-right"></i></button>
+    <div class="slider__dots" id="slideDots"></div>
+  </header>
+
+  <!-- Menu -->
+  <nav class="mainnav" id="mainnav">
+    <div class="container mainnav__inner">
+      <a href="#/" class="mainnav__home" aria-label="Trang chủ"><i class="fas fa-home"></i></a>
+      <button class="mainnav__toggle" id="navToggle" aria-label="Mở menu"><i class="fas fa-bars"></i></button>
+      <ul class="mainnav__menu" id="menu"></ul>
+      <div class="mainnav__tools">
+        <button id="searchBtn" aria-label="Tìm kiếm"><i class="fas fa-search"></i></button>
+        <button class="bell" aria-label="Thông báo"><i class="fas fa-bell"></i></button>
+      </div>
+    </div>
+    <form class="searchbar" id="searchbar">
+      <div class="container"><input type="search" id="searchInput" placeholder="Tìm kiếm bài viết…"><button type="submit">Tìm</button></div>
+    </form>
+  </nav>
+
+  <main class="container">
+    <!-- Thẻ đầu trang -->
+    <div class="tagsbar box"><strong><i class="fas fa-hashtag"></i> CHỦ ĐỀ NỔI BẬT</strong><div id="tags"></div></div>
+
+    <!-- Bài đăng mới nhất (ticker) -->
+    <div class="ticker box">
+      <span class="ticker__title"><i class="fas fa-bolt"></i> MỚI CẬP NHẬT</span>
+      <div class="ticker__track"><div class="ticker__move" id="ticker"></div></div>
+    </div>
+
+    <div id="view"></div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer__grid">
+      <div>
+        <h3 class="footer__brand">Doanh Nhân Kỷ Nguyên Số</h3>
+        <p>Cập nhật tin tức kinh doanh</p>
+        <p class="muted">Câu chuyện khởi nghiệp và bài học thương hiệu cho doanh nhân thời đại số.</p>
+      </div>
+      <div><h4>Danh mục</h4><ul id="footCats"></ul></div>
+      <div><h4>Bài viết mới</h4><ul id="footPosts"></ul></div>
+    </div>
+    <div class="footer__bottom">
+      <div class="container">© <span id="year"></span> Doanh Nhân Kỷ Nguyên Số. Bảo lưu mọi quyền.</div>
+    </div>
+  </footer>
+
+  <button class="totop" id="totop" aria-label="Lên đầu trang"><i class="fas fa-angle-up"></i></button>
+
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
