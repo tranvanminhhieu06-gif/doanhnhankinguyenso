@@ -13,6 +13,21 @@
 <body>
   <!-- Màn hình kết nối (chỉ hiện khi chạy trên mạng, cần mã truy cập GitHub) -->
   <section class="login" id="login" hidden>
+    <!-- Đăng nhập bằng email + mật khẩu -->
+    <form class="login__card" id="pwForm" hidden>
+      <h1><i class="fas fa-user-shield"></i> Trang quản trị</h1>
+      <p class="muted">Doanh Nhân Kỷ Nguyên Số</p>
+      <label>Email<input type="email" id="pwEmail" required autocomplete="username" placeholder="ten@email.com"></label>
+      <label>Mật khẩu
+        <span class="pw-wrap"><input type="password" id="pwPass" required autocomplete="current-password"><button type="button" class="pw-eye" data-eye="pwPass" aria-label="Hiện mật khẩu"><i class="fas fa-eye"></i></button></span>
+      </label>
+      <label class="check"><input type="checkbox" id="pwRemember"> Ghi nhớ trên máy này (chỉ chọn khi dùng máy riêng)</label>
+      <button class="btn btn--primary btn--block" type="submit" id="pwBtn">Đăng nhập</button>
+      <p class="form-err" id="pwErr" hidden></p>
+      <p class="login__switch"><button type="button" class="linklike" id="toToken">Đăng nhập bằng mã GitHub</button></p>
+    </form>
+
+    <!-- Đăng nhập bằng mã truy cập GitHub -->
     <form class="login__card" id="loginForm">
       <h1><i class="fas fa-user-shield"></i> Trang quản trị</h1>
       <p class="muted">Doanh Nhân Kỷ Nguyên Số</p>
@@ -43,6 +58,7 @@
       <label class="check"><input type="checkbox" id="loginRemember"> Ghi nhớ trên máy này (chỉ chọn khi dùng máy riêng)</label>
       <button class="btn btn--primary btn--block" type="submit" id="loginBtn">Vào trang quản trị</button>
       <p class="form-err" id="loginErr" hidden></p>
+      <p class="login__switch" id="toPwWrap" hidden><button type="button" class="linklike" id="toPw">Đăng nhập bằng email</button></p>
     </form>
   </section>
 

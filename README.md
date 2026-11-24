@@ -28,6 +28,16 @@ Cần một **mã truy cập GitHub (fine-grained token)**:
 
 Không chia sẻ mã này cho người khác. Mất máy hoặc lộ mã thì vào trang token của GitHub để xoá (Revoke).
 
+### Đăng nhập bằng email + mật khẩu
+
+Sau khi đăng nhập bằng mã GitHub: **Cài đặt trang → Tài khoản đăng nhập trang quản trị** → nhập email, mật khẩu → *Lưu tài khoản*.
+Từ đó màn hình đăng nhập sẽ hỏi email + mật khẩu.
+
+- Mật khẩu **không được lưu** ở đâu. Mã GitHub được mã hoá (AES-GCM, khoá sinh từ email + mật khẩu qua PBKDF2 600.000 vòng)
+  và lưu trong `admin/auth.json`; chỉ đúng email + mật khẩu mới mở khoá được.
+- Vì file này công khai, hãy dùng mật khẩu **dài, riêng cho trang này**, không trùng mật khẩu email.
+- Khi mã GitHub hết hạn: đăng nhập bằng mã mới rồi *Lưu tài khoản* lại (cùng email).
+
 ## Chạy thử trên máy
 
 ```

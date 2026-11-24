@@ -9,7 +9,8 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const DATA_PATH = "data/content.json";
   const UPLOAD_DIR = "images/uploads";
-  const IS_LOCAL = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+  // ?online: khi chạy trên máy, giả lập bản online để thử màn hình đăng nhập
+  const IS_LOCAL = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) && !new URLSearchParams(location.search).has("online");
   const CONN_KEY = "dnkns-admin-conn";
 
   // Repo mặc định: đoán từ địa chỉ *.github.io/<repo>/admin/, nếu không thì dùng repo hiện tại
@@ -84,6 +85,57 @@
     fr.onerror = rej;
     fr.readAsDataURL(blob);
   });
+
+  /* ================= Tài khoản email + mật khẩu =================
+   * Không lưu mật khẩu ở đâu cả. Mã GitHub được mã hoá AES-GCM bằng khoá sinh từ (email + mật khẩu)
+   * qua PBKDF2-SHA256 600.000 vòng, lưu trong admin/auth.json. Đúng email + mật khẩu mới giải mã được.
+   */
+  const AUTH_PATH = "admin/auth.json";
+  const KDF_ITER = 600000;
+  const te = new TextEncoder();
+  const toB64 = (buf) => { const u = new Uint8Array(buf); let s = ""; for (const b of u) s += String.fromCharCode(b); return btoa(s); };
+  const fromB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const normEmail = (e) => String(e || "").trim().toLowerCase();
+  const maskEmail = (e) => { const [u, d] = normEmail(e).split("@"); return `${u.slice(0, 2)}***@${d || ""}`; };
+  const emailId = async (email) => toB64(await crypto.subtle.digest("SHA-256", te.encode("dnkns-admin:" + normEmail(email))));
+  async function deriveKey(email, pass, salt, iter) {
+    const base = await crypto.subtle.importKey("raw", te.encode(normEmail(email) + "\n" + pass), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", hash: "SHA-256", salt, iterations: iter }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  }
+  async function sealAccount(email, pass, payload) {
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveKey(email, pass, salt, KDF_ITER);
+    const data = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, te.encode(JSON.stringify(payload)));
+    return { id: await emailId(email), hint: maskEmail(email), kdf: "PBKDF2-SHA256", iter: KDF_ITER, salt: toB64(salt), iv: toB64(iv), data: toB64(data), updated: today() };
+  }
+  async function openAccount(acc, email, pass) {
+    const key = await deriveKey(email, pass, fromB64(acc.salt), acc.iter);
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(acc.iv) }, key, fromB64(acc.data));
+    return JSON.parse(new TextDecoder().decode(plain));
+  }
+  // Đọc danh sách tài khoản đã xuất bản trên web (không cần đăng nhập)
+  async function loadAuthPublic() {
+    try {
+      const r = await fetch(`auth.json?v=${Date.now()}`, { cache: "no-store" });
+      return r.ok ? await r.json() : null;
+    } catch { return null; }
+  }
+  // Đọc/ghi admin/auth.json trên GitHub (cần đăng nhập bằng mã GitHub)
+  async function readAuthRemote() {
+    try {
+      const f = await gh(`/contents/${AUTH_PATH}?ref=${encodeURIComponent(conn.branch)}`);
+      return { auth: JSON.parse(textFromB64(f.content)), sha: f.sha };
+    } catch (e) {
+      if (e.status === 404) return { auth: { v: 1, accounts: [] }, sha: null };
+      throw e;
+    }
+  }
+  async function writeAuthRemote(auth, fileSha, message) {
+    await gh(`/contents/${AUTH_PATH}`, {
+      method: "PUT",
+      body: JSON.stringify({ message, content: b64FromText(JSON.stringify(auth, null, 2) + "\n"), branch: conn.branch, ...(fileSha ? { sha: fileSha } : {}) }),
+    });
+  }
 
   async function gh(path, opts = {}) {
     const r = await fetch(`https://api.github.com/repos/${conn.owner}/${conn.repo}${path}`, {
@@ -666,6 +718,23 @@
           <p class="muted" style="flex:1;min-width:200px;margin:0">Bấm vào ô tròn để đổi logo. Nên dùng ảnh vuông, nền trắng hoặc trong suốt.</p>
         </div>
       </div>
+      <div class="card" id="accCard">
+        <h3>Tài khoản đăng nhập trang quản trị</h3>
+        ${IS_LOCAL
+          ? `<p class="muted" style="margin:0">Tạo tài khoản email chỉ làm được trên bản online (doanhnhankynguyenso.com/admin/), vì cần mã GitHub để mã hoá.</p>`
+          : `<p class="muted" style="margin-top:-6px">Đăng nhập bằng email + mật khẩu thay cho mã GitHub. Mật khẩu không được lưu ở đâu cả, chỉ dùng để mở khoá mã GitHub đang dùng.</p>
+             <ul class="acc-list" id="accList"><li class="muted">Đang tải…</li></ul>
+             <form id="accForm" autocomplete="off">
+               <div class="grid3">
+                 <label>Email<input type="email" id="accEmail" required autocomplete="off"></label>
+                 <label>Mật khẩu <span class="pw-wrap"><input type="password" id="accPass" required minlength="10" autocomplete="new-password"><button type="button" class="pw-eye" data-eye="accPass" aria-label="Hiện mật khẩu"><i class="fas fa-eye"></i></button></span></label>
+                 <label>Nhập lại mật khẩu<input type="password" id="accPass2" required autocomplete="new-password"></label>
+               </div>
+               <button class="btn btn--navy" type="submit" id="accBtn"><i class="fas fa-user-plus"></i> Lưu tài khoản</button>
+               <p class="md-help">Mật khẩu ít nhất 10 ký tự, nên dùng mật khẩu riêng, không trùng mật khẩu email.
+               Lưu lại cùng email sẽ đổi mật khẩu. Khi mã GitHub hết hạn, đăng nhập bằng mã mới rồi lưu lại tài khoản.</p>
+             </form>`}
+      </div>
       <div class="card">
         <h3>Kết nối</h3>
         <p class="muted" style="margin:0">${IS_LOCAL
@@ -673,10 +742,56 @@
           : `Đang lưu vào GitHub: <b>${esc(conn.owner)}/${esc(conn.repo)}</b> (nhánh <b>${esc(conn.branch)}</b>).`}</p>
       </div>`;
     $$("[data-k]").forEach((inp) => (inp.onchange = () => { s[inp.dataset.k] = inp.value.trim(); note("Sửa cài đặt trang"); }));
+    if (!IS_LOCAL) bindAccounts();
     $("#logoPick").onclick = async () => {
       const path = await pickImage(512);
       if (!path) return;
       s.logo = path; note("Đổi logo"); pageSettings();
+    };
+  }
+
+  // Quản lý tài khoản email (ghi thẳng lên GitHub, không qua nút Xuất bản)
+  async function bindAccounts() {
+    const list = $("#accList");
+    const draw = (auth) => {
+      const accs = (auth && auth.accounts) || [];
+      list.innerHTML = accs.length
+        ? accs.map((a, i) => `<li><span><i class="fas fa-user"></i> ${esc(a.hint || "Tài khoản")} <span class="muted">· cập nhật ${fmtDate(a.updated)}</span></span>
+            <button class="icon-btn icon-btn--danger" data-acc-rm="${i}" title="Xoá tài khoản"><i class="fas fa-trash"></i></button></li>`).join("")
+        : `<li class="muted">Chưa có tài khoản nào. Đang đăng nhập bằng mã GitHub.</li>`;
+      $$("[data-acc-rm]").forEach((b) => (b.onclick = async () => {
+        const a = accs[+b.dataset.accRm];
+        const ok = await confirmBox({ title: `Xoá tài khoản ${a.hint}?`, text: "Tài khoản này sẽ không đăng nhập được nữa. Bạn vẫn đăng nhập được bằng mã GitHub.", ok: "Xoá tài khoản" });
+        if (!ok) return;
+        try {
+          const { auth: cur, sha: fsha } = await readAuthRemote();
+          cur.accounts = (cur.accounts || []).filter((x) => x.id !== a.id);
+          await writeAuthRemote(cur, fsha, "Xoá tài khoản đăng nhập trang quản trị");
+          draw(cur);
+          toast("Đã xoá tài khoản.");
+        } catch (e) { toast(ghError(e), "err", 8000); }
+      }));
+    };
+    try { draw((await readAuthRemote()).auth); } catch (e) { list.innerHTML = `<li class="form-err">${ghError(e)}</li>`; }
+
+    $("#accForm").onsubmit = async (ev) => {
+      ev.preventDefault();
+      const email = $("#accEmail").value, p1 = $("#accPass").value, p2 = $("#accPass2").value;
+      if (p1.length < 10) { toast("Mật khẩu cần ít nhất 10 ký tự.", "err"); return; }
+      if (p1 !== p2) { toast("Hai ô mật khẩu chưa giống nhau.", "err"); $("#accPass2").focus(); return; }
+      const btn = $("#accBtn");
+      btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Đang mã hoá…`;
+      try {
+        const sealed = await sealAccount(email, p1, { owner: conn.owner, repo: conn.repo, branch: conn.branch, token: conn.token });
+        const { auth: cur, sha: fsha } = await readAuthRemote();
+        cur.v = 1;
+        cur.accounts = [...(cur.accounts || []).filter((x) => x.id !== sealed.id), sealed];
+        await writeAuthRemote(cur, fsha, "Cập nhật tài khoản đăng nhập trang quản trị");
+        $("#accForm").reset();
+        draw(cur);
+        toast(`Đã lưu tài khoản ${esc(sealed.hint)}. Khoảng 1–2 phút nữa đăng nhập bằng email được.`, "ok", 8000);
+      } catch (e) { toast(e.status ? ghError(e) : "Không mã hoá được. Hãy dùng trình duyệt mới (Chrome, Edge, Safari) rồi thử lại.", "err", 8000); }
+      btn.disabled = false; btn.innerHTML = `<i class="fas fa-user-plus"></i> Lưu tài khoản`;
     };
   }
 
@@ -752,14 +867,61 @@
     }
   }
 
-  function showLogin(err) {
+  function showLogin(hasPwAccounts) {
     const g = guessRepo();
     $("#app").hidden = true;
     $("#login").hidden = false;
     $("#loginOwner").value = g.owner; $("#loginRepo").value = g.repo; $("#loginBranch").value = g.branch;
-    $("#loginErr").hidden = !err; $("#loginErr").innerHTML = err || "";
-    $("#loginToken").focus();
+    $("#toPwWrap").hidden = !hasPwAccounts;
+    showForm(hasPwAccounts ? "pw" : "token");
   }
+  const showForm = (which) => {
+    $("#pwForm").hidden = which !== "pw";
+    $("#loginForm").hidden = which === "pw";
+    (which === "pw" ? $("#pwEmail") : $("#loginToken")).focus();
+  };
+  $("#toToken").onclick = () => showForm("token");
+  $("#toPw").onclick = () => showForm("pw");
+  // Nút con mắt: hiện/ẩn mật khẩu
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-eye]");
+    if (!b) return;
+    const inp = document.getElementById(b.dataset.eye);
+    inp.type = inp.type === "password" ? "text" : "password";
+    b.innerHTML = `<i class="fas fa-eye${inp.type === "text" ? "-slash" : ""}"></i>`;
+  });
+
+  $("#pwForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const email = $("#pwEmail").value, pass = $("#pwPass").value;
+    const btn = $("#pwBtn"), err = $("#pwErr");
+    btn.disabled = true; btn.textContent = "Đang kiểm tra…"; err.hidden = true;
+    try {
+      const auth = await loadAuthPublic();
+      const id = await emailId(email);
+      const acc = auth && (auth.accounts || []).find((a) => a.id === id);
+      let payload = null;
+      if (acc) { try { payload = await openAccount(acc, email, pass); } catch { payload = null; } }
+      if (!payload) throw Object.assign(new Error("bad"), { bad: true });
+      conn = payload;
+      try {
+        const repo = await gh("");
+        if (!repo.permissions || !repo.permissions.push) throw Object.assign(new Error("no push"), { status: 403 });
+      } catch (ge) {
+        conn = null;
+        throw Object.assign(new Error("token"), { tokenErr: ge.status === 401
+          ? "Email và mật khẩu đúng, nhưng mã GitHub bên trong đã hết hạn hoặc bị thu hồi. Hãy đăng nhập bằng mã GitHub mới rồi vào Cài đặt trang để lưu lại tài khoản."
+          : ghError(ge) });
+      }
+      saveConn(conn, $("#pwRemember").checked);
+      $("#pwPass").value = "";
+      await startApp();
+    } catch (ex) {
+      err.hidden = false;
+      err.innerHTML = ex.bad ? "Email hoặc mật khẩu không đúng." : ex.tokenErr || "Không đăng nhập được. Kiểm tra mạng rồi thử lại.";
+    }
+    btn.disabled = false; btn.textContent = "Đăng nhập";
+  };
 
   $("#loginForm").onsubmit = async (e) => {
     e.preventDefault();
@@ -805,6 +967,7 @@
     startApp();
   } else {
     conn = readConn();
-    if (conn && conn.token) startApp(); else showLogin();
+    if (conn && conn.token) startApp();
+    else loadAuthPublic().then((auth) => showLogin(!!(auth && (auth.accounts || []).length)));
   }
 })();
