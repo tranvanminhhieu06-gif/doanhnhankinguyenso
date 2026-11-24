@@ -790,7 +790,11 @@
         $("#accForm").reset();
         draw(cur);
         toast(`Đã lưu tài khoản ${esc(sealed.hint)}. Khoảng 1–2 phút nữa đăng nhập bằng email được.`, "ok", 8000);
-      } catch (e) { toast(e.status ? ghError(e) : "Không mã hoá được. Hãy dùng trình duyệt mới (Chrome, Edge, Safari) rồi thử lại.", "err", 8000); }
+      } catch (e) {
+        toast(e.status ? ghError(e)
+          : !window.isSecureContext ? "Trang đang mở bằng http (không bảo mật) nên trình duyệt chặn mã hoá. Hãy mở trang quản trị bằng địa chỉ https://… rồi thử lại."
+          : "Không mã hoá được. Hãy dùng trình duyệt mới (Chrome, Edge, Safari) rồi thử lại.", "err", 9000);
+      }
       btn.disabled = false; btn.innerHTML = `<i class="fas fa-user-plus"></i> Lưu tài khoản`;
     };
   }
@@ -896,6 +900,11 @@
     e.preventDefault();
     const email = $("#pwEmail").value, pass = $("#pwPass").value;
     const btn = $("#pwBtn"), err = $("#pwErr");
+    if (!window.isSecureContext) {
+      err.hidden = false;
+      err.innerHTML = "Trang đang mở bằng http (không bảo mật) nên không đăng nhập bằng Gmail được. Hãy mở bằng địa chỉ <b>https://</b>.";
+      return;
+    }
     btn.disabled = true; btn.textContent = "Đang kiểm tra…"; err.hidden = true;
     try {
       const auth = await loadAuthPublic();
