@@ -867,13 +867,14 @@
     }
   }
 
-  function showLogin(hasPwAccounts) {
+  // Luôn mở màn hình Gmail + mật khẩu trước; mã GitHub là cách đăng nhập phụ
+  function showLogin() {
     const g = guessRepo();
     $("#app").hidden = true;
     $("#login").hidden = false;
     $("#loginOwner").value = g.owner; $("#loginRepo").value = g.repo; $("#loginBranch").value = g.branch;
-    $("#toPwWrap").hidden = !hasPwAccounts;
-    showForm(hasPwAccounts ? "pw" : "token");
+    $("#toPwWrap").hidden = false;
+    showForm("pw");
   }
   const showForm = (which) => {
     $("#pwForm").hidden = which !== "pw";
@@ -898,6 +899,7 @@
     btn.disabled = true; btn.textContent = "Đang kiểm tra…"; err.hidden = true;
     try {
       const auth = await loadAuthPublic();
+      if (!auth || !(auth.accounts || []).length) throw Object.assign(new Error("none"), { none: true });
       const id = await emailId(email);
       const acc = auth && (auth.accounts || []).find((a) => a.id === id);
       let payload = null;
@@ -918,7 +920,9 @@
       await startApp();
     } catch (ex) {
       err.hidden = false;
-      err.innerHTML = ex.bad ? "Email hoặc mật khẩu không đúng." : ex.tokenErr || "Không đăng nhập được. Kiểm tra mạng rồi thử lại.";
+      err.innerHTML = ex.none
+        ? "Chưa có tài khoản Gmail nào. Lần đầu, hãy bấm <b>Đăng nhập bằng mã GitHub</b> bên dưới, rồi vào <b>Cài đặt trang → Tài khoản đăng nhập</b> để tạo tài khoản."
+        : ex.bad ? "Email hoặc mật khẩu không đúng." : ex.tokenErr || "Không đăng nhập được. Kiểm tra mạng rồi thử lại.";
     }
     btn.disabled = false; btn.textContent = "Đăng nhập";
   };
@@ -968,6 +972,6 @@
   } else {
     conn = readConn();
     if (conn && conn.token) startApp();
-    else loadAuthPublic().then((auth) => showLogin(!!(auth && (auth.accounts || []).length)));
+    else showLogin();
   }
 })();

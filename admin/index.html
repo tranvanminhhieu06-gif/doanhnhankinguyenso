@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="admin.css?v=4">
 </head>
 <body>
   <!-- Màn hình kết nối (chỉ hiện khi chạy trên mạng, cần mã truy cập GitHub) -->
@@ -17,7 +17,7 @@
     <form class="login__card" id="pwForm" hidden>
       <h1><i class="fas fa-user-shield"></i> Trang quản trị</h1>
       <p class="muted">Doanh Nhân Kỷ Nguyên Số</p>
-      <label>Email<input type="email" id="pwEmail" required autocomplete="username" placeholder="ten@email.com"></label>
+      <label>Gmail<input type="email" id="pwEmail" required autocomplete="username" placeholder="ten@gmail.com"></label>
       <label>Mật khẩu
         <span class="pw-wrap"><input type="password" id="pwPass" required autocomplete="current-password"><button type="button" class="pw-eye" data-eye="pwPass" aria-label="Hiện mật khẩu"><i class="fas fa-eye"></i></button></span>
       </label>
@@ -58,7 +58,7 @@
       <label class="check"><input type="checkbox" id="loginRemember"> Ghi nhớ trên máy này (chỉ chọn khi dùng máy riêng)</label>
       <button class="btn btn--primary btn--block" type="submit" id="loginBtn">Vào trang quản trị</button>
       <p class="form-err" id="loginErr" hidden></p>
-      <p class="login__switch" id="toPwWrap" hidden><button type="button" class="linklike" id="toPw">Đăng nhập bằng email</button></p>
+      <p class="login__switch" id="toPwWrap" hidden><button type="button" class="linklike" id="toPw">← Đăng nhập bằng Gmail</button></p>
     </form>
   </section>
 
@@ -110,6 +110,6 @@
   <input type="file" id="filePicker" accept="image/*" hidden>
 
   <script src="../js/markdown.js"></script>
-  <script src="admin.js"></script>
+  <script src="admin.js?v=4"></script>
 </body>
 </html>
