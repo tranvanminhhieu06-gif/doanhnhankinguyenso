@@ -871,21 +871,22 @@
     }
   }
 
-  // Luôn mở màn hình Gmail + mật khẩu trước; mã GitHub là cách đăng nhập phụ
+  // Màn hình chỉ có Gmail + mật khẩu. Ô nhập mã GitHub được ẩn, chỉ hiện khi mở /admin/?ma-github
+  // (dùng khi mã GitHub hết hạn cần làm mới, hoặc để tạo tài khoản Gmail mới).
+  const TOKEN_MODE = new URLSearchParams(location.search).has("ma-github");
   function showLogin() {
     const g = guessRepo();
     $("#app").hidden = true;
     $("#login").hidden = false;
     $("#loginOwner").value = g.owner; $("#loginRepo").value = g.repo; $("#loginBranch").value = g.branch;
     $("#toPwWrap").hidden = false;
-    showForm("pw");
+    showForm(TOKEN_MODE ? "token" : "pw");
   }
   const showForm = (which) => {
     $("#pwForm").hidden = which !== "pw";
     $("#loginForm").hidden = which === "pw";
     (which === "pw" ? $("#pwEmail") : $("#loginToken")).focus();
   };
-  $("#toToken").onclick = () => showForm("token");
   $("#toPw").onclick = () => showForm("pw");
   // Nút con mắt: hiện/ẩn mật khẩu
   document.addEventListener("click", (e) => {
@@ -921,7 +922,7 @@
       } catch (ge) {
         conn = null;
         throw Object.assign(new Error("token"), { tokenErr: ge.status === 401
-          ? "Email và mật khẩu đúng, nhưng mã GitHub bên trong đã hết hạn hoặc bị thu hồi. Hãy đăng nhập bằng mã GitHub mới rồi vào Cài đặt trang để lưu lại tài khoản."
+          ? "Email và mật khẩu đúng, nhưng mã GitHub bên trong đã hết hạn hoặc bị thu hồi. Hãy mở <b>/admin/?ma-github</b>, đăng nhập bằng mã GitHub mới rồi vào Cài đặt trang để lưu lại tài khoản."
           : ghError(ge) });
       }
       saveConn(conn, $("#pwRemember").checked);
@@ -930,7 +931,7 @@
     } catch (ex) {
       err.hidden = false;
       err.innerHTML = ex.none
-        ? "Chưa có tài khoản Gmail nào. Lần đầu, hãy bấm <b>Đăng nhập bằng mã GitHub</b> bên dưới, rồi vào <b>Cài đặt trang → Tài khoản đăng nhập</b> để tạo tài khoản."
+        ? "Chưa có tài khoản Gmail nào. Hãy mở <b>/admin/?ma-github</b> để đăng nhập bằng mã GitHub, rồi vào <b>Cài đặt trang → Tài khoản đăng nhập</b> để tạo tài khoản."
         : ex.bad ? "Email hoặc mật khẩu không đúng." : ex.tokenErr || "Không đăng nhập được. Kiểm tra mạng rồi thử lại.";
     }
     btn.disabled = false; btn.textContent = "Đăng nhập";
