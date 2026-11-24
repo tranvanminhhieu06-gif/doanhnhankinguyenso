@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Quản trị – Doanh Nhân Kỷ Nguyên Số</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <!-- Màn hình kết nối (chỉ hiện khi chạy trên mạng, cần mã truy cập GitHub) -->
+  <section class="login" id="login" hidden>
+    <form class="login__card" id="loginForm">
+      <h1><i class="fas fa-user-shield"></i> Trang quản trị</h1>
+      <p class="muted">Doanh Nhân Kỷ Nguyên Số</p>
+
+      <label>Mã truy cập GitHub (token)
+        <input type="password" id="loginToken" required autocomplete="off" placeholder="github_pat_…">
+      </label>
+      <details class="login__help">
+        <summary>Lấy mã truy cập ở đâu?</summary>
+        <ol>
+          <li>Mở <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">trang tạo token của GitHub</a> (đăng nhập tài khoản sở hữu repo).</li>
+          <li>Đặt tên, ví dụ <em>Quản trị web</em>, chọn thời hạn (Expiration).</li>
+          <li><strong>Repository access</strong> → <em>Only select repositories</em> → chọn repo của web.</li>
+          <li><strong>Permissions</strong> → <em>Repository permissions</em> → <strong>Contents</strong>: <em>Read and write</em>.</li>
+          <li>Bấm <em>Generate token</em>, chép mã rồi dán vào ô trên.</li>
+        </ol>
+      </details>
+
+      <details class="login__adv">
+        <summary>Repo đang kết nối</summary>
+        <div class="grid3">
+          <label>Tài khoản<input id="loginOwner" required></label>
+          <label>Repo<input id="loginRepo" required></label>
+          <label>Nhánh<input id="loginBranch" required value="main"></label>
+        </div>
+      </details>
+
+      <label class="check"><input type="checkbox" id="loginRemember"> Ghi nhớ trên máy này (chỉ chọn khi dùng máy riêng)</label>
+      <button class="btn btn--primary btn--block" type="submit" id="loginBtn">Vào trang quản trị</button>
+      <p class="form-err" id="loginErr" hidden></p>
+    </form>
+  </section>
+
+  <!-- Giao diện quản trị -->
+  <div class="app" id="app" hidden>
+    <aside class="side" id="side">
+      <a class="side__brand" href="#/tong-quan"><i class="fas fa-newspaper"></i><span>Quản trị<small>Doanh Nhân Kỷ Nguyên Số</small></span></a>
+      <nav class="side__nav">
+        <a href="#/tong-quan" data-nav="tong-quan"><i class="fas fa-gauge"></i> Tổng quan</a>
+        <a href="#/bai-viet" data-nav="bai-viet"><i class="fas fa-file-lines"></i> Bài viết</a>
+        <a href="#/banner" data-nav="banner"><i class="fas fa-images"></i> Banner</a>
+        <a href="#/danh-muc" data-nav="danh-muc"><i class="fas fa-folder-tree"></i> Danh mục</a>
+        <a href="#/cai-dat" data-nav="cai-dat"><i class="fas fa-gear"></i> Cài đặt trang</a>
+      </nav>
+      <div class="side__foot">
+        <a href="../" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> Xem trang web</a>
+        <button id="logoutBtn" hidden><i class="fas fa-right-from-bracket"></i> Đăng xuất</button>
+        <span class="side__mode" id="modeLabel"></span>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="topbar__menu" id="menuBtn" aria-label="Mở menu"><i class="fas fa-bars"></i></button>
+        <h2 id="pageTitle">Tổng quan</h2>
+        <div class="topbar__publish" id="publishBar">
+          <span class="dirty" id="dirtyLabel" hidden><i class="fas fa-circle"></i> <span id="dirtyCount"></span></span>
+          <button class="btn btn--ghost" id="discardBtn" hidden>Bỏ thay đổi</button>
+          <button class="btn btn--primary" id="publishBtn" disabled><i class="fas fa-cloud-arrow-up"></i> Xuất bản</button>
+        </div>
+      </header>
+      <main class="content" id="view"><div class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải nội dung…</div></main>
+    </div>
+  </div>
+
+  <!-- Hộp xác nhận -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal__box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle"></h3>
+      <p id="modalText"></p>
+      <div class="modal__actions">
+        <button class="btn btn--ghost" id="modalCancel"></button>
+        <button class="btn btn--danger" id="modalOk"></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <input type="file" id="filePicker" accept="image/*" hidden>
+
+  <script src="../js/markdown.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

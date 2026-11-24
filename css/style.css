@@ -153,6 +153,15 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 .single .cover { width: 100%; border-radius: 2px; margin: 16px 0; aspect-ratio: 16/9; object-fit: cover; background: #ddd; }
 .single .content { font-size: 17px; }
 .single .content h2 { font-size: 22px; margin-top: 28px; }
+.single .content h3 { font-size: 19px; margin-top: 22px; }
+.single .content img { border-radius: 2px; margin: 8px auto; }
+.single .content figure { margin: 20px 0; }
+.single .content figcaption { text-align: center; color: var(--muted); font-size: 14px; font-style: italic; }
+.single .content blockquote { margin: 16px 0; padding: 10px 16px; border-left: 4px solid var(--red); background: #f7f7f9; font-style: italic; }
+.single .content ul, .single .content ol { padding-left: 24px; }
+.single .content ul { list-style: disc; }
+.single .content a { color: var(--red); text-decoration: underline; }
+.single .content hr { border: 0; border-top: 1px solid var(--line); margin: 24px 0; }
 .breadcrumb { font-size: 14px; color: var(--muted); margin: 20px 0 0; }
 .share { display: flex; gap: 8px; margin-top: 24px; }
 .share a { width: 36px; height: 36px; display: grid; place-items: center; color: #fff; border-radius: 2px; }

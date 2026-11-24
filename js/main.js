@@ -1,13 +1,36 @@
-(() => {
+(async () => {
   const $ = (s, el = document) => el.querySelector(s);
   const view = $("#view");
   const PER_PAGE = 5;
-  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const bg = (url) => `style="background-image:url('${url}')"`;
-  const link = (p) => `#/bai-viet/${p.id}`;
-  const cats = (p) => p.cats.map((c) => `<a class="cat" href="#/danh-muc/${c}">${esc(catName(c))}</a>`).join("");
-  // Ngày lưu dạng mm/dd/yyyy → hiển thị dd/mm/yyyy
-  const fmtDate = (s) => { const [m, d, y] = s.split("/"); return `${d}/${m}/${y}`; };
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  /* ---------- Tải dữ liệu (do trang quản trị /admin chỉnh sửa) ---------- */
+  let DATA;
+  try {
+    // ?v= để tránh trình duyệt/CDN giữ bản cũ sau khi vừa xuất bản
+    const r = await fetch(`data/content.json?v=${Date.now()}`, { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    DATA = await r.json();
+  } catch (e) {
+    view.innerHTML = `<div class="box empty" style="margin:30px 0">Chưa tải được nội dung trang. Vui lòng tải lại sau ít phút.</div>`;
+    console.error("Không tải được data/content.json", e);
+    return;
+  }
+  const SITE = DATA.site || {};
+  const CATEGORIES = DATA.categories || [];
+  const TAGS = DATA.tags || [];
+  // Chỉ hiện bài đã xuất bản, mới nhất lên đầu
+  const POSTS = (DATA.posts || [])
+    .filter((p) => p.status !== "draft")
+    .map((p) => ({ cats: [], views: 0, ...p }))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const catName = (slug) => (CATEGORIES.find((c) => c.slug === slug) || {}).name || slug;
+
+  const bg = (url) => `style="background-image:url('${esc(url).replace(/'/g, "%27")}')"`;
+  const link = (p) => `#/bai-viet/${encodeURIComponent(p.id)}`;
+  const cats = (p) => p.cats.map((c) => `<a class="cat" href="#/danh-muc/${esc(c)}">${esc(catName(c))}</a>`).join("");
+  // Ngày lưu dạng yyyy-mm-dd → hiển thị dd/mm/yyyy
+  const fmtDate = (s) => { const [y, m, d] = String(s).split("-"); return d ? `${d}/${m}/${y}` : esc(s); };
   const meta = (p) => `<div class="meta">
       <span><i class="fas fa-clock"></i>${fmtDate(p.date)}</span>
       ${p.minutes ? `<span><i class="fas fa-book-open"></i>${p.minutes} phút đọc</span>` : ""}
@@ -28,8 +51,8 @@
     const track = $("#slides"), dots = $("#slideDots");
     $("#siteHeader").classList.toggle("has-logo", !!SITE.bannerHasLogo);
     const slideHTML = (b) => {
-      const img = `<img src="${b.img}" alt="${esc(b.alt)}" draggable="false">`;
-      return b.link ? `<a class="slide" href="${b.link}" target="_blank" rel="noopener">${img}</a>` : `<div class="slide">${img}</div>`;
+      const img = `<img src="${esc(b.img)}" alt="${esc(b.alt)}" draggable="false">`;
+      return b.link ? `<a class="slide" href="${esc(b.link)}" target="_blank" rel="noopener">${img}</a>` : `<div class="slide">${img}</div>`;
     };
     // Thêm bản sao ảnh đầu ở cuối để trượt tiếp sang trái liền mạch
     track.innerHTML = list.map(slideHTML).join("") + (list.length > 1 ? slideHTML(list[0]) : "");
@@ -75,12 +98,12 @@
   })();
 
   $("#menu").innerHTML =
-    CATEGORIES.filter((c) => c.slug !== "tin-tuc").map((c) => `<li><a href="#/danh-muc/${c.slug}">${c.name}</a></li>`).join("") +
+    CATEGORIES.filter((c) => c.inMenu !== false).map((c) => `<li><a href="#/danh-muc/${esc(c.slug)}">${esc(c.name)}</a></li>`).join("") +
     `<li><a href="#/lien-he">Liên hệ</a></li>`;
-  $("#tags").innerHTML = TAGS.map((s) => `<a href="#/danh-muc/${s}">${esc(catName(s))}</a>`).join("");
+  $("#tags").innerHTML = TAGS.map((s) => `<a href="#/danh-muc/${esc(s)}">${esc(catName(s))}</a>`).join("");
   const tick = POSTS.slice(0, 6).map((p) => `<a href="${link(p)}"><i class="fas fa-arrow-circle-right"></i>${esc(p.title)}</a>`).join("");
   $("#ticker").innerHTML = tick + tick;
-  $("#footCats").innerHTML = CATEGORIES.map((c) => `<li><a href="#/danh-muc/${c.slug}">${c.name}</a></li>`).join("");
+  $("#footCats").innerHTML = CATEGORIES.map((c) => `<li><a href="#/danh-muc/${esc(c.slug)}">${esc(c.name)}</a></li>`).join("");
   $("#footPosts").innerHTML = POSTS.slice(0, 5).map((p) => `<li><a href="${link(p)}">${esc(p.title)}</a></li>`).join("");
 
   // Đồng hồ
@@ -135,12 +158,13 @@
       </div>
       <div class="widget box">
         <h3 class="section-title"><span>Danh mục</span></h3>
-        <ul>${counts.map((c) => `<li><a href="#/danh-muc/${c.slug}"><span>${c.name}</span><span class="count">${c.n}</span></a></li>`).join("")}</ul>
+        <ul>${counts.map((c) => `<li><a href="#/danh-muc/${esc(c.slug)}"><span>${esc(c.name)}</span><span class="count">${c.n}</span></a></li>`).join("")}</ul>
       </div>
     </aside>`;
   };
 
   const featured = () => {
+    if (POSTS.length < 3) return "";
     const [a, b, c] = POSTS;
     const tabItems = (list) => list.map((p) => `
       <li><a href="${link(p)}" class="thumb" ${bg(p.img)}></a>
@@ -154,12 +178,12 @@
     <section class="featured">
       <a href="${link(b)}" class="hero" ${bg(b.img)}>
         <span class="hero__icon"><i class="fas fa-camera"></i></span>
-        <div class="hero__body">${b.cats.map((x) => `<span class="cat">${catName(x)}</span>`).join("")}<h2>${esc(b.title)}</h2>${meta(b)}</div>
+        <div class="hero__body">${b.cats.map((x) => `<span class="cat">${esc(catName(x))}</span>`).join("")}<h2>${esc(b.title)}</h2>${meta(b)}</div>
       </a>
       <div class="stack">
         ${[a, c].map((p) => `
         <div class="mini box">
-          <a href="${link(p)}" class="mini__img" ${bg(p.img)}>${p.cats.map((x) => `<span class="cat">${catName(x)}</span>`).join("")}</a>
+          <a href="${link(p)}" class="mini__img" ${bg(p.img)}>${p.cats.map((x) => `<span class="cat">${esc(catName(x))}</span>`).join("")}</a>
           <h3><a href="${link(p)}">${esc(p.title)}</a></h3>${meta(p)}
         </div>`).join("")}
       </div>
@@ -213,19 +237,18 @@
     const related = POSTS.filter((x) => x.id !== p.id && x.cats.some((c) => p.cats.includes(c))).slice(0, 3);
     const url = encodeURIComponent(location.href);
     return `
-    <div class="breadcrumb"><a href="#/">Trang chủ</a> / <a href="#/danh-muc/${p.cats[0]}">${catName(p.cats[0])}</a></div>
+    <div class="breadcrumb"><a href="#/">Trang chủ</a>${p.cats[0] ? ` / <a href="#/danh-muc/${esc(p.cats[0])}">${esc(catName(p.cats[0]))}</a>` : ""}</div>
     <section class="layout">
       <div class="post-list">
         <article class="single box">
           ${cats(p)}
           <h1>${esc(p.title)}</h1>
           ${meta(p)}
-          <img class="cover" src="${p.img}" alt="${esc(p.title)}">
+          ${p.img ? `<img class="cover" src="${esc(p.img)}" alt="${esc(p.title)}">` : ""}
           <div class="content">
-            <p><strong>${esc(p.excerpt.replace(/…$/, ""))}...</strong></p>
-            <p>Nội dung chi tiết của bài viết sẽ được hiển thị tại đây. Bạn có thể kết nối với CMS (WordPress REST API, Headless CMS…) hoặc bổ sung trường <code>content</code> trong <code>js/data.js</code> để hiển thị toàn văn.</p>
-            <h2>Những điểm chính</h2>
-            <p>Doanh Nhân Kỷ Nguyên Số mang đến góc nhìn thực tế về khởi nghiệp, xây dựng thương hiệu và vận hành doanh nghiệp trong thời đại số.</p>
+            ${p.content && p.content.trim()
+              ? markdown(p.content)
+              : `<p><strong>${esc(String(p.excerpt || "").replace(/…$/, ""))}…</strong></p><p class="empty-note">Nội dung đầy đủ của bài viết đang được cập nhật.</p>`}
           </div>
           <div class="share">
             <a style="background:#1877f2" target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=${url}"><i class="fab fa-facebook-f"></i></a>
